@@ -158,51 +158,7 @@ def main():
         st.info("👋 Selamat datang! Data asosiasi tidak ditemukan. Silakan isi parameter di sidebar kiri dan klik 'Kumpulkan Data' untuk memulai.")
         st.stop()
         
-    df_assoc = load_data()
-    
-    # --- METRICS CARDS ---
-    def display_metrics_cards(df):
-        """Menampilkan KPI cards"""
-        if df is None or df.empty:
-            return
-        
-        col1, col2, col3, col4 = st.columns(4)
-        
-        # Card 1: Total Shared Traffic
-        total_traffic = df["Shared traffic"].sum()
-        with col1:
-            st.metric(
-                label="📊 Total Shared Traffic",
-                value=f"{total_traffic:,.0f}",
-                border=True
-            )
-        
-        # Card 2: Total Associations
-        total_assoc = len(df)
-        with col2:
-            st.metric(
-                label="🔗 Total Associations",
-                value=f"{total_assoc:,}",
-                border=True
-            )
-        
-        # Card 3: Avg Lift
-        avg_lift = df["Lift"].mean()
-        with col3:
-            st.metric(
-                label="📈 Avg Lift",
-                value=f"{avg_lift:.2f}",
-                border=True
-            )
-        
-        # Card 4: Avg Confidence
-        avg_confidence = df["Confidence"].mean()
-        with col4:
-            st.metric(
-                label="✅ Avg Confidence",
-                value=f"{avg_confidence:.2%}",
-                border=True
-            ) 
+    df_assoc = load_data() 
     
     if isinstance(df_assoc, str): 
         st.error(df_assoc)
@@ -235,11 +191,6 @@ def main():
             "Support", "Confidence", "Lift"
         ]].copy()
         df_results_sorted = df_results.sort_values("Lift", ascending=False)
-        
-        # --- TAMPILKAN METRICS CARDS ---
-        st.markdown("---")
-        display_metrics_cards(df_results_sorted)
-        st.markdown("---")
     
     else:
         st.warning("Data asosiasi kosong. Tidak ada yang bisa ditampilkan.")
