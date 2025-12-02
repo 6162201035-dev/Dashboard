@@ -180,15 +180,15 @@ def main():
         df_metrics["P(A)"] = df_metrics["Store area"].map(prob_store)
         df_metrics["P(B)"] = df_metrics["Associated area"].map(prob_associated)
         df_metrics["Support"] = df_metrics["Shared traffic"] / total_shared_traffic 
-        df_metrics["Confidence"] = df_metrics["Support"] / df_metrics["P(A)"]
-        df_metrics["Lift"] = df_metrics["Confidence"] / df_metrics["P(B)"]
+        df_metrics["Confident"] = df_metrics["Support"] / df_metrics["P(A)"]
+        df_metrics["Lift"] = df_metrics["Confident"] / df_metrics["P(B)"]
         df_metrics.replace([np.inf, -np.inf], np.nan, inplace=True)
         df_metrics.fillna(0, inplace=True)
         
         # DataFrame final untuk Treemap
         df_results = df_metrics[[
             "Store area", "Associated area", "Shared traffic", 
-            "Support", "Confidence", "Lift"
+            "Support", "Confident", "Lift"
         ]].copy()
         df_results_sorted = df_results.sort_values("Lift", ascending=False)
     
@@ -204,7 +204,7 @@ def main():
         # Dropdown untuk memilih metrik
         metric_choice = st.selectbox(
             "Pilih Metrik untuk Ukuran Treemap:",
-            ['Shared traffic', 'Lift', 'Confidence', 'Support']
+            ['Shared traffic', 'Lift', 'Confident', 'Support']
         )
         
         # Filter data (treemap tidak suka nilai 0 atau negatif)
@@ -241,3 +241,4 @@ def main():
 # --- Jalankan Fungsi Utama ---
 if __name__ == "__main__":
     main()
+
