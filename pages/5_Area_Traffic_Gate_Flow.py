@@ -270,7 +270,6 @@ def build_dashboard(df_traffic, df_flow):
                 
                 # --- B. Scatter Plot (Dipindahkan ke SINI) ---
                 st.markdown("---")
-                st.markdown("##### ⚖️ Peta Karakteristik (In vs Out)")
                 
                 gate_scatter = df_flow.groupby("Gate")[["Gate Flow(in)", "Gate Flow(out)"]].sum().reset_index()
                 gate_scatter['Total Volume'] = gate_scatter['Gate Flow(in)'] + gate_scatter['Gate Flow(out)']
@@ -366,5 +365,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
