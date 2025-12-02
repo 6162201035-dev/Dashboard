@@ -200,14 +200,12 @@ def main():
     if not df_results_sorted.empty:
         top_pair = df_results_sorted.iloc[0]
         
-        c1, c2, c3, c4 = st.columns(4)
+        c1, c2, c2, c3 = st.columns(3)
         with c1:
             st.metric("Total Shared Traffic", f"{total_shared_traffic:,.0f}")
         with c2:
-            st.metric("Top Association", f"{top_pair['Store area']} ↔ {top_pair['Associated area']}")
-        with c3:
             st.metric("Max Lift Score", f"{top_pair['Lift']:.2f}", help=">1 means strong positive association")
-        with c4:
+        with c3:
             avg_conf = df_results_sorted['Confident'].mean()
             st.metric("Avg Confidence", f"{avg_conf:.1%}", help="Average probability of visiting B given A")
         
@@ -257,5 +255,6 @@ def main():
 # --- Jalankan Fungsi Utama ---
 if __name__ == "__main__":
     main()
+
 
 
