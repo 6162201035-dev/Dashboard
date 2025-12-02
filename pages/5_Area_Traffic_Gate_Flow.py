@@ -151,15 +151,15 @@ def load_data():
     return df_traffic, df_flow
 
 # ===================================
-# 🎁 DASHBOARD BUILDER
+# 🎁 DASHBOARD BUILDER (MODIFIED)
 # ===================================
 def build_dashboard(df_traffic, df_flow):
     """
-    Constructs the main dashboard layout.
+    Fungsi ini menganalisis data RINGKASAN dalam satu halaman.
     """
     
-    # --- 1. AUTOMATED INSIGHTS (HOTSPOTS) ---
-    # Calculate Busiest Gate
+    # --- 1. HOTSPOTS INSIGHTS ---
+    # Hitung Gate tersibuk
     if not df_flow.empty:
         df_flow['Total_Gate_Vol'] = df_flow['Gate Flow(in)'] + df_flow['Gate Flow(out)']
         busiest_gate_row = df_flow.loc[df_flow['Total_Gate_Vol'].idxmax()]
@@ -168,7 +168,7 @@ def build_dashboard(df_traffic, df_flow):
     else:
         busiest_gate_name, busiest_gate_val = "-", 0
 
-    # Calculate Busiest Area
+    # Hitung Area tersibuk
     if not df_traffic.empty:
         busiest_area_row = df_traffic.loc[df_traffic['Customer'].idxmax()]
         busiest_area_name = busiest_area_row['Area']
@@ -189,16 +189,18 @@ def build_dashboard(df_traffic, df_flow):
     total_flow_out = df_flow['Gate Flow(out)'].sum()
 
     c1, c2, c3 = st.columns(3)
-    c1.metric("Total Area Traffic", f"{int(total_customer):,}", help="Sum of 'Customer' from Area file")
-    c2.metric("Total Gate Inflow", f"{int(total_flow_in):,}", help="Sum of 'Flow In' from Gate file")
-    c3.metric("Total Gate Outflow", f"{int(total_flow_out):,}", help="Sum of 'Flow Out' from Gate file")
+    c1.metric("Total Area Traffic", f"{int(total_customer):,}")
+    c2.metric("Total Gate Inflow", f"{int(total_flow_in):,}")
+    c3.metric("Total Gate Outflow", f"{int(total_flow_out):,}")
     
     st.markdown("---")
 
     # --- 3. MAIN COLUMNS ---
     col1, col2 = st.columns(2)
 
-    # === KOLOM KIRI: AREA ANALYSIS ===
+    # =========================================
+    # KOLOM KIRI: AREA ANALYSIS (Bar + Donut)
+    # =========================================
     with col1:
         with st.container(border=True):
             st.subheader("📊 Analisis Area")
@@ -215,7 +217,7 @@ def build_dashboard(df_traffic, df_flow):
                 )
                 st.plotly_chart(fig_area, use_container_width=True)
                 
-                # B. Donut Chart (Top 5 + Others)
+                # B. Donut Chart
                 st.markdown("---")
                 top_n = 5
                 df_pie = area_agg.copy()
@@ -239,12 +241,14 @@ def build_dashboard(df_traffic, df_flow):
             else:
                 st.warning("Data Customer kosong.")
 
-    # === KOLOM KANAN: GATE ANALYSIS ===
+    # =========================================
+    # KOLOM KANAN: GATE ANALYSIS (Bar + Scatter)
+    # =========================================
     with col2:
         with st.container(border=True):
             st.subheader("🚪 Analisis Gate")
             
-            # A. Grouped Bar Chart
+            # --- A. Grouped Bar Chart (Masuk vs Keluar) ---
             gate_agg = df_flow.groupby("Gate").agg({
                 "Gate Flow(in)": "sum",
                 "Gate Flow(out)": "sum"
@@ -257,56 +261,57 @@ def build_dashboard(df_traffic, df_flow):
                 fig_gate = px.bar(
                     gate_melted, x="Gate", y="Jumlah",
                     color="Flow Type", barmode="group",
-                    title="Perbandingan Masuk vs Keluar",
+                    title="Perbandingan Volume Masuk vs Keluar",
                     color_discrete_map={"Gate Flow(in)": "#2E86C1", "Gate Flow(out)": "#E74C3C"}
                 )
+                # Pindahkan legenda ke atas agar hemat tempat
+                fig_gate.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
                 st.plotly_chart(fig_gate, use_container_width=True)
+                
+                # --- B. Scatter Plot (Dipindahkan ke SINI) ---
+                st.markdown("---")
+                st.markdown("##### ⚖️ Peta Karakteristik (In vs Out)")
+                
+                gate_scatter = df_flow.groupby("Gate")[["Gate Flow(in)", "Gate Flow(out)"]].sum().reset_index()
+                gate_scatter['Total Volume'] = gate_scatter['Gate Flow(in)'] + gate_scatter['Gate Flow(out)']
+                
+                fig_scatter = px.scatter(
+                    gate_scatter, 
+                    x="Gate Flow(in)", y="Gate Flow(out)", 
+                    size="Total Volume", color="Gate",
+                    hover_name="Gate", text="Gate",
+                    # Judul dihapus/dipendekkan karena sudah ada header markdown
+                    labels={"Gate Flow(in)": "Inflow", "Gate Flow(out)": "Outflow"}
+                )
+                
+                # Garis Diagonal
+                max_val = max(gate_scatter["Gate Flow(in)"].max(), gate_scatter["Gate Flow(out)"].max())
+                fig_scatter.add_shape(type="line", line=dict(dash="dash", color="gray"),
+                    x0=0, y0=0, x1=max_val, y1=max_val)
+                
+                fig_scatter.update_traces(textposition='top center')
+                fig_scatter.update_layout(showlegend=False, margin=dict(l=0, r=0, t=10, b=0)) # Hemat margin
+                
+                st.plotly_chart(fig_scatter, use_container_width=True)
+                
+                st.caption("""
+                **Cara Baca:**
+                Garis putus-putus = Seimbang. 
+                Titik di **Bawah** garis = Dominan Masuk (Entrance). 
+                Titik di **Atas** garis = Dominan Keluar (Exit).
+                """)
+
             else:
                 st.warning("Data Gate kosong.")
 
-    # --- 4. SCATTER PLOT (GATE BEHAVIOR) ---
-    st.markdown("---")
-    st.subheader("⚖️ Peta Karakteristik Gate")
-    
-    if not df_flow.empty:
-        
-        
-        gate_scatter = df_flow.groupby("Gate")[["Gate Flow(in)", "Gate Flow(out)"]].sum().reset_index()
-        gate_scatter['Total Volume'] = gate_scatter['Gate Flow(in)'] + gate_scatter['Gate Flow(out)']
-        
-        sc_col1, sc_col2 = st.columns([3, 1])
-        with sc_col1:
-            fig_scatter = px.scatter(
-                gate_scatter, 
-                x="Gate Flow(in)", y="Gate Flow(out)", 
-                size="Total Volume", color="Gate",
-                hover_name="Gate", text="Gate",
-                title="Dominasi Gate: Masuk (Bawah Garis) vs Keluar (Atas Garis)"
-            )
-            # Add Diagonal Line
-            max_val = max(gate_scatter["Gate Flow(in)"].max(), gate_scatter["Gate Flow(out)"].max())
-            fig_scatter.add_shape(type="line", line=dict(dash="dash", color="gray"),
-                x0=0, y0=0, x1=max_val, y1=max_val)
-            fig_scatter.update_traces(textposition='top center')
-            st.plotly_chart(fig_scatter, use_container_width=True)
-            
-        with sc_col2:
-            st.info("""
-            **Panduan Grafik:**
-            - **Garis Putus-putus:** Area seimbang (Masuk = Keluar).
-            - **Di Bawah Garis:** Gate dominan **MASUK** (Entrance).
-            - **Di Atas Garis:** Gate dominan **KELUAR** (Exit).
-            - **Besar Lingkaran:** Total volume traffic.
-            """)
-
-    # --- 5. RAW DATA ---
+    # --- 4. RAW DATA (Di paling bawah) ---
     st.markdown("---")
     with st.expander("📂 Lihat Data Mentah"):
         st.markdown("#### Data Area Traffic")
         st.dataframe(df_traffic, use_container_width=True)
         st.markdown("#### Data Gate Flow")
         st.dataframe(df_flow, use_container_width=True)
-
+        
 # ==============================
 # 🚀 MAIN CONTROLLER
 # ==============================
@@ -368,3 +373,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
