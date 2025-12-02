@@ -551,9 +551,9 @@ def main():
             "Total Pria": "Male_Total",
             "Total Wanita": "Female_Total",
             "Anak (0-6 thn)": "Child(0~6 Age)",
-            "Remaja (7-15 thn)": "Young person(7~15 Age)",
-            "Dewasa (16-35 thn)": "Teenager(16~35 Age)",
-            "Paruh Baya (36-60 thn)": "Middle age(36~60 Age)",
+            "Pemuda (7-15 thn)": "Young person(7~15 Age)",
+            "Remaja (16-35 thn)": "Teenager(16~35 Age)",
+            "Usia Menengah (36-60 thn)": "Middle age(36~60 Age)",
             "Lansia (>60 thn)": "Senility(60< Age)"
         }
         available_options = {label: col for label, col in METRIC_OPTIONS.items() if col in df.columns}
@@ -596,3 +596,4 @@ def main():
 # --- Jalankan Fungsi Utama ---
 if __name__ == "__main__":
     main()
+
