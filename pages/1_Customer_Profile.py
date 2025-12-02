@@ -591,9 +591,10 @@ def main():
         st.markdown('<div class="block-space"></div>', unsafe_allow_html=True)
     # -------------------------------------------------------------------
     
-    st.caption('<div style="font-size:0.97em;text-align:center">© 2025 Customer Profile + Dwell Time Analytics - Tema Senada</div>', unsafe_allow_html=True)
+    st.caption('<div style="font-size:0.97em;text-align:center">© 2025 Customer Profile & Dwell Time Analytics </div>', unsafe_allow_html=True)
 
 # --- Jalankan Fungsi Utama ---
 if __name__ == "__main__":
     main()
+
 
