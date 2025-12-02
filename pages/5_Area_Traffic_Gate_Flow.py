@@ -293,13 +293,6 @@ def build_dashboard(df_traffic, df_flow):
                 fig_scatter.update_layout(showlegend=False, margin=dict(l=0, r=0, t=10, b=0)) # Hemat margin
                 
                 st.plotly_chart(fig_scatter, use_container_width=True)
-                
-                st.caption("""
-                **Cara Baca:**
-                Garis putus-putus = Seimbang. 
-                Titik di **Bawah** garis = Dominan Masuk (Entrance). 
-                Titik di **Atas** garis = Dominan Keluar (Exit).
-                """)
 
             else:
                 st.warning("Data Gate kosong.")
@@ -373,4 +366,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
