@@ -196,21 +196,6 @@ def main():
         st.warning("Data asosiasi kosong. Tidak ada yang bisa ditampilkan.")
         st.stop()
 
-    # --- 3.5 KEY PERFORMANCE INDICATORS (KPIs) ---
-    if not df_results_sorted.empty:
-        top_pair = df_results_sorted.iloc[0]
-        
-        c1, c2, c2, c3 = st.columns(3)
-        with c1:
-            st.metric("Total Shared Traffic", f"{total_shared_traffic:,.0f}")
-        with c2:
-            st.metric("Max Lift Score", f"{top_pair['Lift']:.2f}", help=">1 means strong positive association")
-        with c3:
-            avg_conf = df_results_sorted['Confident'].mean()
-            st.metric("Avg Confidence", f"{avg_conf:.1%}", help="Average probability of visiting B given A")
-        
-        st.markdown("---")
-
     # --- 4. TAMPILKAN TREEMAP (SATU-SATUNYA VISUALISASI) ---
     with st.container(border=True):
         st.subheader("🌳 Treemap Metrik Asosiasi")
@@ -255,6 +240,7 @@ def main():
 # --- Jalankan Fungsi Utama ---
 if __name__ == "__main__":
     main()
+
 
 
 
