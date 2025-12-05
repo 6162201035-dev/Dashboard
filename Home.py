@@ -55,7 +55,7 @@ col1, col2, col3, col4, col5 = st.columns(5)
 with col1:
     with st.container(border=True, height=400): # Height container sedikit dinaikkan ke 400 biar aman
         st.markdown("### 👥 Customer")
-        card_desc("Siapa yang datang? Analisis demografi, gender, usia, dan *dwell time* secara mendalam.")
+        card_desc("Siapa yang datang? Analisis demografi, gender, usia, dan dwell time secara mendalam.")
         st.divider()
         st.page_link("pages/1_Customer_Profile.py", label="Buka Modul ➔", use_container_width=True)
 
@@ -99,3 +99,4 @@ st.markdown("""
     <small>© 2025 Data Analysis Dashboard | Dibentuk oleh N. | v1.0 Stable</small>
 </div>
 """, unsafe_allow_html=True)
+
