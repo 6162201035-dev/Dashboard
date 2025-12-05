@@ -178,9 +178,24 @@ def load_data():
 # ===================================
 def build_dashboard(df_traffic, df_flow_in, df_flow_out):
     """
-    Fungsi ini berisi visualisasi dalam layout 2x2 grid
+    Fungsi ini berisi visualisasi dalam layout 2x2 grid dengan pewarnaan yang diperbaiki
     """
     
+    # --- 🎨 KONFIGURASI PALET WARNA (Agar Konsisten) ---
+    COLOR_PRIMARY = "#00B4D8"   # Biru Laut (Cyan) - Untuk Traffic Utama
+    COLOR_SECONDARY = "#F72585" # Pink/Magenta - Untuk Flow Out / Aksen
+    COLOR_TERTIARY = "#4CC9F0"  # Biru Muda
+    COLOR_QUATERNARY = "#7209B7" # Ungu
+    COLOR_SUCCESS = "#48CAE4"   # Varian Biru/Hijau untuk Flow In
+    COLOR_WARNING = "#FFB703"   # Kuning/Oranye untuk Weekend
+    
+    # Peta warna khusus untuk Bar Chart agar semantik (In vs Out) jelas tapi tetap estetik
+    BAR_COLOR_MAP = {
+        "Traffic (Customer)": COLOR_PRIMARY,
+        "Flow In": "#3A0CA3",  # Ungu Gelap atau Biru Tua
+        "Flow Out": COLOR_SECONDARY
+    }
+
     # ==============================
     # 🧭 KPI SUMMARY (Tetap di atas, full width)
     # ==============================
@@ -215,11 +230,20 @@ def build_dashboard(df_traffic, df_flow_in, df_flow_out):
             fig_heat = px.density_heatmap(
                 heatmap_df,
                 x="Hour", y="Weekly", z="Visitors",
-                color_continuous_scale="YlOrRd",
+                # Ganti ke 'Plasma' atau 'Magma' agar menyatu dengan dark mode (Ungu -> Pink -> Kuning)
+                color_continuous_scale="Plasma", 
                 title="Distribusi Kepadatan Pengunjung per Hari & Jam",
-                height=500 # Atur tinggi plot
+                height=500 
             )
-            fig_heat.update_layout(xaxis_title="Jam", yaxis_title="Hari", template="plotly_dark", margin=dict(t=50, b=0))
+            # Menghapus background plot agar transparan menyatu dengan Streamlit dark mode
+            fig_heat.update_layout(
+                xaxis_title="Jam", 
+                yaxis_title="Hari", 
+                template="plotly_dark", 
+                margin=dict(t=50, b=0),
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)'
+            )
             st.plotly_chart(fig_heat, use_container_width=True)
         else:
             st.warning("Kolom jam (cth: '00:00~00:59') tidak ditemukan di file traffic.")
@@ -227,7 +251,6 @@ def build_dashboard(df_traffic, df_flow_in, df_flow_out):
     with col2:
         st.subheader("📈 Rata-rata Traffic per Jam")
         if hour_cols:
-            # Cek jika heatmap_df sudah dibuat (efisiensi)
             if 'heatmap_df' not in locals():
                  heatmap_df = df_traffic.melt(id_vars=["Weekly"], value_vars=hour_cols, var_name="Hour", value_name="Visitors")
             
@@ -236,10 +259,18 @@ def build_dashboard(df_traffic, df_flow_in, df_flow_out):
                 hourly_avg, x="Hour", y="Visitors",
                 markers=True,
                 title="Rata-rata Pengunjung per Jam (Agregasi Mingguan)",
-                color_discrete_sequence=["#00b4d8"],
-                height=500 # Samakan tinggi plot
+                # Gunakan warna utama (Cyan)
+                color_discrete_sequence=[COLOR_PRIMARY],
+                height=500 
             )
-            fig_hourly.update_layout(margin=dict(t=50, b=0))
+            # Area di bawah garis diarsir sedikit agar lebih cantik
+            fig_hourly.update_traces(fill='tozeroy', line=dict(width=3))
+            fig_hourly.update_layout(
+                margin=dict(t=50, b=0),
+                template="plotly_dark",
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)'
+            )
             st.plotly_chart(fig_hourly, use_container_width=True)
         else:
             st.warning("Kolom jam tidak ditemukan.")
@@ -266,9 +297,17 @@ def build_dashboard(df_traffic, df_flow_in, df_flow_out):
             color="Tipe Metrik",
             barmode="group",
             title="Total Kunjungan per Hari (Perbandingan Metrik)",
-            height=500 # Samakan tinggi plot
+            # Menggunakan color map manual agar konsisten
+            color_discrete_map=BAR_COLOR_MAP,
+            height=500 
         )
-        fig_total.update_layout(margin=dict(t=50, b=0))
+        fig_total.update_layout(
+            margin=dict(t=50, b=0),
+            template="plotly_dark",
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        )
         st.plotly_chart(fig_total, use_container_width=True)
 
     with col4:
@@ -289,14 +328,22 @@ def build_dashboard(df_traffic, df_flow_in, df_flow_out):
                 compare_df, x="Hour", y="Visitors", color="Period",
                 markers=True,
                 title="Pola Kunjungan Customer: Weekday vs Weekend",
-                color_discrete_sequence=["#00b4d8", "#f77f00"],
-                height=500 # Samakan tinggi plot
+                # Kontras Biru vs Kuning/Oranye
+                color_discrete_sequence=[COLOR_PRIMARY, COLOR_WARNING],
+                height=500 
             )
-            fig_compare.update_layout(margin=dict(t=50, b=0))
+            fig_compare.update_traces(line=dict(width=3))
+            fig_compare.update_layout(
+                margin=dict(t=50, b=0),
+                template="plotly_dark",
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            )
             st.plotly_chart(fig_compare, use_container_width=True)
         else:
             st.warning("Kolom jam tidak ditemukan.")
-
+            
 # ==============================
 # 🚀 MAIN (KONTROLER)
 # ==============================
@@ -390,3 +437,4 @@ def main():
 # --- Jalankan Fungsi Utama ---
 if __name__ == "__main__":
     main()
+
