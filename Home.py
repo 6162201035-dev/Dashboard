@@ -2,7 +2,6 @@
 # 🏠 HOME PAGE (MAIN DASHBOARD)
 # ================================
 import streamlit as st
-import datetime
 
 # --- Konfigurasi dasar halaman ---
 st.set_page_config(
@@ -12,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- CSS Tambahan untuk Tampilan Lebih "Mahal" ---
+# --- CSS Tambahan untuk Tampilan Lebih Interaktif ---
 st.markdown("""
 <style>
     /* Efek Hover pada Container */
@@ -27,19 +26,12 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- Sidebar Info ---
-with st.sidebar:
-    st.header("📌 Status Dashboard")
-    st.info(f"📅 Tanggal: {datetime.date.today().strftime('%d %B %Y')}")
-    st.success("🟢 API Connection: Online")
-    st.markdown("---")
-
 # --- Judul halaman utama (Hero Section) ---
 st.markdown('<div style="text-align:center; font-size:3rem; font-weight:800; margin-bottom:0.5rem;">AI Traffic Data Dashboard</div>', unsafe_allow_html=True)
 st.markdown('<div style="text-align:center; font-size:1.2rem; color:#888; margin-bottom:2rem;">Pusat kendali analisis data pengunjung, pola pergerakan, dan performa area secara real-time.</div>', unsafe_allow_html=True)
 
-# --- 🚀 TAMBAHAN: Executive Summary (KPI Dummy Data) ---
-# Ini membuat Home page terlihat hidup. Nanti angkanya bisa diambil dari data asli.
+# --- 🚀 Executive Summary (Ringkasan KPI) ---
+# Data angka ini masih dummy/contoh. Nanti bisa diganti dengan data real.
 kpi1, kpi2, kpi3, kpi4 = st.columns(4)
 
 with kpi1:
@@ -56,10 +48,9 @@ st.markdown("---")
 # --- Konten utama halaman Home (Menu Navigasi) ---
 st.subheader("📂 Pilih Modul Analisis")
 
-# Layout 5 Kolom (Tetap dipertahankan karena sudah bagus)
+# Layout 5 Kolom
 col1, col2, col3, col4, col5 = st.columns(5)
 
-# Saya tambahkan sedikit styling emoji agar lebih menonjol
 with col1:
     with st.container(border=True, height=380): 
         st.markdown("### 👥 Customer")
