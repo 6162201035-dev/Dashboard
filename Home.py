@@ -15,13 +15,11 @@ st.set_page_config(
 st.markdown("""
 <style>
     /* Efek Hover pada Container */
-    [data-testid="stVerticalBlock"] > [style*="flex-direction: column;"] > [data-testid="stVerticalBlock"] {
-        transition: all 0.3s ease;
-    }
     div[data-testid="stVerticalBlockBorderWrapper"]:hover {
         border-color: #FF4B4B !important;
         transform: translateY(-5px);
         box-shadow: 0 4px 15px rgba(255, 75, 75, 0.3);
+        transition: all 0.3s ease;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -34,51 +32,62 @@ st.markdown("---")
 # --- Konten Utama (Menu Navigasi) ---
 st.subheader("📂 Pilih Modul Analisis")
 
-# Helper function untuk membuat deskripsi dengan tinggi tetap
-# height: 90px cukup untuk menampung sekitar 4 baris teks.
+# --- PERBAIKAN UTAMA DI SINI ---
 def card_desc(text):
-    return st.markdown(f'<div style="height: 90px; overflow: hidden; display: flex; align-items: flex-start;">{text}</div>', unsafe_allow_html=True)
+    # Height 140px: Cukup untuk 5-6 baris teks.
+    # Font-size 0.9rem: Sedikit lebih kecil agar muat banyak.
+    return st.markdown(f"""
+    <div style="
+        height: 140px; 
+        overflow: hidden; 
+        display: flex; 
+        align-items: flex-start; 
+        font-size: 0.9rem;
+        line-height: 1.5; 
+        margin-bottom: 5px;">
+        {text}
+    </div>
+    """, unsafe_allow_html=True)
 
 col1, col2, col3, col4, col5 = st.columns(5)
 
 # --- MODUL 1 ---
 with col1:
-    with st.container(border=True, height=380): 
+    with st.container(border=True, height=400): # Height container sedikit dinaikkan ke 400 biar aman
         st.markdown("### 👥 Customer")
-        # Ganti st.markdown biasa dengan fungsi card_desc atau HTML div manual
-        card_desc("Siapa yang datang? Analisis demografi, gender, usia, dan *dwell time*.")
+        card_desc("Siapa yang datang? Analisis demografi, gender, usia, dan *dwell time* secara mendalam.")
         st.divider()
         st.page_link("pages/1_Customer_Profile.py", label="Buka Modul ➔", use_container_width=True)
 
 # --- MODUL 2 ---
 with col2:
-    with st.container(border=True, height=380):
+    with st.container(border=True, height=400):
         st.markdown("### 🔗 Relation")
-        card_desc("Bagaimana pergerakannya? Analisis korelasi dan hubungan antar area.")
+        card_desc("Bagaimana pergerakannya? Analisis korelasi dan hubungan antar area yang saling berasosiasi.")
         st.divider()
         st.page_link("pages/2_Associated_Area.py", label="Buka Modul ➔", use_container_width=True) 
 
 # --- MODUL 3 ---
 with col3:
-    with st.container(border=True, height=380):
+    with st.container(border=True, height=400):
         st.markdown("### 🏬 Potency")
-        card_desc("Area mana yang potensial? Analisis tingkat konversi pengunjung.")
+        card_desc("Area mana yang potensial? Analisis tingkat konversi dan perilaku belanja pengunjung.")
         st.divider()
         st.page_link("pages/3_Area_Performance.py", label="Buka Modul ➔", use_container_width=True) 
 
 # --- MODUL 4 ---
 with col4:
-    with st.container(border=True, height=380):
+    with st.container(border=True, height=400):
         st.markdown("### ⏳ Period")
-        card_desc("Kapan waktu tersibuk? Tren trafik pengunjung per jam & hari.")
+        card_desc("Kapan waktu tersibuk? Tren trafik pengunjung per jam & hari dalam seminggu.")
         st.divider()
         st.page_link("pages/4_Time_Period_Traffic_Flow.py", label="Buka Modul ➔", use_container_width=True)
         
 # --- MODUL 5 ---
 with col5:
-    with st.container(border=True, height=380):
+    with st.container(border=True, height=400):
         st.markdown("### 🚦 Traffic")
-        card_desc("Berapa banyak yang lewat? Flow gabungan Gerbang & Area.")
+        card_desc("Berapa banyak yang lewat? Flow gabungan Gerbang & Area (In vs Out).")
         st.divider()
         st.page_link("pages/5_Area_Traffic_Gate_Flow.py", label="Buka Modul ➔", use_container_width=True)
 
