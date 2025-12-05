@@ -11,10 +11,9 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- CSS Tambahan ---
+# --- CSS Tambahan (Hover Effect) ---
 st.markdown("""
 <style>
-    /* Efek Hover pada Container */
     div[data-testid="stVerticalBlockBorderWrapper"]:hover {
         border-color: #FF4B4B !important;
         transform: translateY(-5px);
@@ -29,50 +28,59 @@ st.markdown('<div style="text-align:center; font-size:3rem; font-weight:800; mar
 st.markdown('<div style="text-align:center; font-size:1.2rem; color:#888; margin-bottom:2rem;">Pusat kendali analisis data pengunjung, pola pergerakan, dan performa area secara real-time.</div>', unsafe_allow_html=True)
 st.markdown("---")
 
-# --- Konten Utama (Menu Navigasi) ---
+# --- Konten Utama ---
 st.subheader("📂 Pilih Modul Analisis")
 
-# 🛠️ FUNGSI PEMBUAT KARTU (Solusi agar Rata)
+# 🛠️ FUNGSI PEMBUAT KARTU (V3 - PIXEL PERFECT)
 def make_card(title_emoji, title_text, desc_text, link_path):
-    # Gunakan container dengan tinggi TETAP (Fixed Height)
-    with st.container(border=True, height=420):
+    # Container Utama
+    with st.container(border=True, height=400):
         
-        # 1. JUDUL (Header)
-        # Kita beri sedikit margin bawah agar rapi
-        st.markdown(f"### {title_emoji} {title_text}")
-
-        # 2. DESKRIPSI (Fixed Height Box)
-        # Kita PAKSA area ini tingginya 130px.
-        # Jika teks pendek, sisa ruang kosong akan mengisi ke bawah.
-        # Jika teks panjang, akan terpotong rapi (atau bisa di-scroll jika overflow auto).
+        # 1. BLOK KONTEN (Judul + Deskripsi digabung)
+        # Kita kunci total tingginya di 220px.
+        # Judul dikunci min-height 50px (muat 2 baris).
+        # Deskripsi mengisi sisa ruang tapi dikunci layout-nya.
         st.markdown(f"""
-        <div style="
-            height: 130px; 
-            min-height: 130px;
-            overflow: hidden; 
-            font-size: 0.9rem; 
-            color: #e0e0e0;
-            margin-bottom: 10px;
-        ">
-            {desc_text}
+        <div style="height: 220px; display: flex; flex-direction: column;">
+            <div style="
+                min-height: 60px; 
+                display: flex; 
+                align-items: center; 
+                font-weight: 700; 
+                font-size: 1.3rem; 
+                margin-bottom: 10px;
+                line-height: 1.2;
+            ">
+                <span style="margin-right: 8px;">{title_emoji}</span> {title_text}
+            </div>
+            
+            <div style="
+                flex-grow: 1; 
+                font-size: 0.9rem; 
+                color: #dcdcdc; 
+                overflow: hidden; 
+                text-overflow: ellipsis;
+                line-height: 1.5;
+            ">
+                {desc_text}
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
-        # 3. DIVIDER (Garis Pemisah)
-        # Karena elemen di atasnya tingginya dikunci, garis ini pasti sejajar.
+        # 2. DIVIDER (Pasti sejajar karena HTML di atas tingginya dikunci 220px)
         st.divider()
 
-        # 4. TOMBOL
+        # 3. TOMBOL
         st.page_link(link_path, label="Buka Modul ➔", use_container_width=True)
 
 
-# --- PENERAPAN LAYOUT (Lebih Bersih & Rapi) ---
+# --- PENERAPAN LAYOUT ---
 col1, col2, col3, col4, col5 = st.columns(5)
 
 with col1:
     make_card(
         "👥", "Customer", 
-        "Siapa yang datang? Analisis demografi, gender, usia, dan *dwell time* secara mendalam.",
+        "Siapa yang datang? Analisis demografi, gender, usia, dan <i>dwell time</i> secara mendalam.",
         "pages/1_Customer_Profile.py"
     )
 
@@ -112,4 +120,3 @@ st.markdown("""
     <small>© 2025 Data Analysis Dashboard | Dibentuk oleh N. | v1.0 Stable</small>
 </div>
 """, unsafe_allow_html=True)
-
