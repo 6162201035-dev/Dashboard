@@ -80,7 +80,7 @@ col1, col2, col3, col4, col5 = st.columns(5)
 with col1:
     make_card(
         "👥", "Customer", 
-        "Siapa yang datang? Analisis demografi, gender, usia, dan <i>dwell time</i> secara mendalam.",
+        "Siapa yang datang? Analisis demografi, gender, usia, dan dwell time secara mendalam.",
         "pages/1_Customer_Profile.py"
     )
 
@@ -120,3 +120,4 @@ st.markdown("""
     <small>© 2025 Data Analysis Dashboard | Dibentuk oleh N. | v1.0 Stable</small>
 </div>
 """, unsafe_allow_html=True)
+
