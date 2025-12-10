@@ -175,12 +175,6 @@ def build_dashboard(df_traffic, df_flow):
         busiest_area_val = busiest_area_row['Customer']
     else:
         busiest_area_name, busiest_area_val = "-", 0
-    
-    st.info(f"""
-    🔥 **Hotspots & Highlights:**
-    - **Gate Tersibuk:** {busiest_gate_name} ({int(busiest_gate_val):,} lintasan)
-    - **Area Teramai:** {busiest_area_name} ({int(busiest_area_val):,} customer)
-    """)
 
     # --- 2. KPI METRICS ---
     st.subheader("🧭 Ringkasan KPI Total")
@@ -365,6 +359,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
