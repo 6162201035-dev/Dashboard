@@ -11,70 +11,69 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- CSS Styling untuk Kartu ---
-# Kita buat class CSS khusus '.card-box' agar tampilan mirip container Streamlit
+# --- CSS Styling untuk Kartu (AUTO Light/Dark Mode) ---
 st.markdown("""
 <style>
-    /* Styling dasar kartu HTML */
+
+    /* Card container */
     .card-box {
-        border: 1px solid rgba(250, 250, 250, 0.2); /* Border halus */
+        border: 1px solid var(--secondary-text-color);
         border-radius: 8px;
         padding: 20px;
-        height: 250px; /* Tinggi Tetap */
+        height: 250px;
         background-color: transparent;
         transition: all 0.3s ease;
         display: flex;
         flex-direction: column;
         justify-content: flex-start;
+        color: var(--text-color); /* auto mode */
     }
 
-    /* Efek Hover: Border menyala & naik sedikit */
+    /* Hover effect */
     .card-box:hover {
-        border-color: #FF4B4B;
-        background-color: rgba(255, 75, 75, 0.05); /* Sedikit tint merah */
+        border-color: var(--primary-color);
+        background-color: color-mix(in srgb, var(--primary-color) 10%, transparent);
         transform: translateY(-5px);
         box-shadow: 0 4px 15px rgba(255, 75, 75, 0.3);
         cursor: pointer;
     }
 
-    /* Styling Teks agar tidak berubah warna jadi biru link */
+    /* Pastikan link tidak menjadi biru */
     a.card-link {
         text-decoration: none;
-        color: inherit !important;
+        color: inherit !important; 
     }
 
-    /* Judul Kartu */
+    /* Judul Card */
     .card-title {
         font-size: 1.4rem;
         font-weight: 700;
         margin-bottom: 10px;
-        color: #ffffff;
+        color: var(--text-color);
         display: flex;
         align-items: center;
     }
 
-    /* Deskripsi Kartu */
+    /* Deskripsi Card */
     .card-desc {
         font-size: 0.9rem;
-        color: #d0d0d0;
+        color: var(--secondary-text-color);
         line-height: 1.5;
     }
+
 </style>
 """, unsafe_allow_html=True)
 
 # --- Judul Halaman ---
 st.markdown('<div style="text-align:center; font-size:3rem; font-weight:800; margin-bottom:0.5rem;">AI Traffic Data Dashboard</div>', unsafe_allow_html=True)
-st.markdown('<div style="text-align:center; font-size:1.2rem; color:#888; margin-bottom:2rem;">Pusat kendali analisis data pengunjung, pola pergerakan, dan performa area secara real-time.</div>', unsafe_allow_html=True)
+st.markdown('<div style="text-align:center; font-size:1.2rem; color:var(--secondary-text-color); margin-bottom:2rem;">Pusat kendali analisis data pengunjung, pola pergerakan, dan performa area secara real-time.</div>', unsafe_allow_html=True)
 st.markdown("---")
 
 # --- Konten Utama ---
 st.subheader("📂 Pilih Modul Analisis")
 
-# 🛠️ FUNGSI PEMBUAT CLICKABLE CARD (HTML)
+# Fungsi pembuat card klik
 def make_clickable_card(emoji, title, desc, link_href):
-    # link_href: Nama page di URL (biasanya nama file tanpa 'pages/' dan tanpa '.py')
-    # Contoh: 'pages/1_Customer_Profile.py' -> href-nya biasanya 'Customer_Profile'
-    
     html_code = f"""
     <a href="{link_href}" target="_self" class="card-link">
         <div class="card-box">
@@ -90,19 +89,14 @@ def make_clickable_card(emoji, title, desc, link_href):
     st.markdown(html_code, unsafe_allow_html=True)
 
 
-# --- PENERAPAN LAYOUT ---
+# Layout 5 kolom
 col1, col2, col3, col4, col5 = st.columns(5)
-
-# PENTING: Pastikan 'link_href' sesuai dengan URL browser saat Anda membuka halaman tersebut.
-# Biasanya Streamlit menghapus angka urutan (1_, 2_) di URL, tapi kadang tidak.
-# Coba cek URL browser Anda saat buka page Customer Profile, misal: "localhost:8501/Customer_Profile"
-# Maka isi href="Customer_Profile"
 
 with col1:
     make_clickable_card(
         "👥", "Customer", 
         "Siapa yang datang? Analisis demografi, gender, usia, dan <i>dwell time</i> secara mendalam.",
-        "Customer_Profile" 
+        "Customer_Profile"
     )
 
 with col2:
@@ -133,11 +127,11 @@ with col5:
         "Area_Traffic_Gate_Flow"
     )
 
-st.markdown("---") 
+st.markdown("---")
 
 # --- Footer ---
 st.markdown("""
-<div style="text-align:center; color:#666;">
+<div style="text-align:center; color:var(--secondary-text-color);">
     <small>© 2025 Data Analysis Dashboard | Dibentuk oleh N. | v1.0 Stable</small>
 </div>
 """, unsafe_allow_html=True)
