@@ -13,7 +13,7 @@ def analyze_with_gemini(data_summary, user_question):
     # 2. Konfigurasi Gemini
     try:
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash') # Model cepat & murah
+        model = genai.GenerativeModel('gemini-2.5-flash') # Model cepat & murah
         
         # 3. Buat Prompt (Instruksi)
         prompt = f"""
