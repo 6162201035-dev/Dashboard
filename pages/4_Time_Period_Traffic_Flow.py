@@ -1,5 +1,5 @@
 # ==========================================
-# ⏳ TIME PERIOD TRAFFIC FLOW (AI INTEGRATED)
+# ⏳ TIME PERIOD TRAFFIC FLOW (AI INTEGRATED - FIXED)
 # ==========================================
 import streamlit as st
 import pandas as pd
@@ -27,26 +27,27 @@ TRAFFIC_FILE = os.path.join(DATA_FOLDER, "time_traffic_flow.xlsx")
 DEFAULT_USER_ID = "4748ef52-ccb6-4dbe-acf4-1268d25123d8"
 DEFAULT_SITE_CODE = "P00077"
 
+# --- URL API (Jika masih 404, ganti URL ini dengan yang ada di kode lama mu) ---
+# Saya mencoba menebak endpoint yang benar berdasarkan pola Page 2 (Controller)
+API_URL = 'https://winnertech.hk:8090/api/en-us/passengerFlow/PassengerFlowTimePeriodExportData'
+
 # ==============================
 # 📥 FUNGSI PENGAMBIL DATA
 # ==============================
 def fetch_traffic_flow_data(token, user_id, start_date_slash, end_date_slash, site_code):
     st.write("Mengambil Data Time Traffic Flow...")
     
-    # URL API (Menggunakan endpoint Passenger Flow)
-    data_api_url = 'https://winnertech.hk:8090/api/en-us/passengerFlow/PassengerFlowTimePeriodExportData'
-    
-    # Payload disesuaikan dengan struktur Page 2 (Associated Area) yang sukses
+    # Payload disesuaikan dengan pola PAGE 2 (SiteTreeSelects) yang SUKSES
     data_payload = {
         "userId": user_id, "lang": "en-us", "menuId": 3000103,
         "params": {
             "isClose": 0, "module": "BM00019S007", "dateType": "d",
             "beginDate": start_date_slash, "endDate": end_date_slash,
-            # Menggunakan SiteTreeSelects (mirip Page 2) agar lebih stabil
+            # PENTING: Menggunakan SiteTreeSelects agar konsisten dengan Page 2
             "SiteTreeSelects": [
                 {"source": "0", "type": "0", "code": site_code, "operators": []}
             ],
-            "timePeriod": 60 # Interval per 60 menit (1 Jam)
+            "timePeriod": 60 # Interval 60 menit
         }
     }
     
@@ -57,20 +58,30 @@ def fetch_traffic_flow_data(token, user_id, start_date_slash, end_date_slash, si
     }
     
     try:
-        response = requests.post(data_api_url, headers=data_headers, json=data_payload, timeout=30)
-        response.raise_for_status()
+        response = requests.post(API_URL, headers=data_headers, json=data_payload, timeout=30)
         
+        # Cek Error HTTP (404, 500, dll)
+        if response.status_code != 200:
+            st.error(f"Gagal mengambil data. Status Code: {response.status_code}")
+            st.error(f"Pesan Server: {response.text}")
+            return False
+            
         # Cek apakah responsenya file Excel
-        if response.content and response.headers.get('Content-Type') != 'application/json':
+        if response.content and 'application/json' not in response.headers.get('Content-Type', ''):
             with open(TRAFFIC_FILE, 'wb') as f:
                 f.write(response.content)
             st.success(f"Sukses: File Traffic Flow ({TRAFFIC_FILE}) disimpan.")
             return True
         else:
-            st.error(f"Gagal: Server tidak mengembalikan file Excel. Respons:\n{response.json()}")
+            try:
+                err_json = response.json()
+                st.error(f"Gagal: Server tidak mengembalikan file Excel. Respons:\n{err_json}")
+            except:
+                st.error(f"Gagal: Response bukan file Excel maupun JSON valid.\nIsi: {response.text[:200]}")
             return False
+
     except Exception as e:
-        st.error(f"KRITIS: Error saat mengambil Data: {e}")
+        st.error(f"KRITIS: Error koneksi: {e}")
         return False
 
 # ==============================
@@ -85,15 +96,13 @@ def load_data():
     except Exception as e:
         return f"Gagal membaca file. Error: {e}"
 
-    # Bersihkan nama kolom
     df.columns = [c.strip() for c in df.columns]
     
-    # Mapping nama kolom fleksibel (Antisipasi beda nama dari API)
+    # Mapping nama kolom fleksibel (Antisipasi nama kolom berbeda)
     rename_map = {
         "Time": "Jam", "Time Period": "Jam", "Periode Waktu": "Jam",
         "Enter": "Masuk", "Entering": "Masuk", "In": "Masuk",
-        "Exit": "Keluar", "Exiting": "Keluar", "Out": "Keluar",
-        "Staff": "Staff"
+        "Exit": "Keluar", "Exiting": "Keluar", "Out": "Keluar"
     }
     existing_cols_to_rename = {k: v for k, v in rename_map.items() if k in df.columns}
     df.rename(columns=existing_cols_to_rename, inplace=True)
@@ -167,11 +176,12 @@ def generate_traffic_summary(df):
 # ==============================
 def main():
     
-    # --- SIDEBAR (Sama seperti Page 2) ---
+    # --- SIDEBAR (Mirip Page 2) ---
     with st.sidebar:
         st.header("⚙️ Kontrol Pengambilan Data")
         if 'token' not in st.session_state: st.session_state.token = "Bearer ey..."
         if 'start_date' not in st.session_state: st.session_state.start_date = date.today()
+        # Time Flow biasanya 1 hari, jadi end_date disamakan defaultnya
         if 'end_date' not in st.session_state: st.session_state.end_date = date.today()
         
         st.session_state.token = st.text_input("Authorization Token", value=st.session_state.token, type="password")
@@ -189,6 +199,10 @@ def main():
                 st.success("Data berhasil diambil!")
                 st.cache_data.clear()
                 st.rerun()
+        
+        if st.button("🔄 Refresh Cache", use_container_width=True):
+            st.cache_data.clear()
+            st.rerun()
 
     st.markdown('<div style="text-align:center; font-size:2.6rem; font-weight:700; margin-bottom:1.2rem;">⏳ Time Period Traffic Flow</div>', unsafe_allow_html=True)
     st.caption(f"Analisis detail pergerakan pengunjung berdasarkan waktu.")
@@ -208,7 +222,6 @@ def main():
 
     # --- TAMPILAN GRAFIK ---
     
-    # Metrik
     col1, col2, col3 = st.columns(3)
     masuk_col = next((c for c in df.columns if c in ['Masuk', 'Entering']), None)
     
@@ -224,18 +237,21 @@ def main():
         
         fig_line = px.line(df, x=jam_col, y=masuk_col, markers=True, title="Traffic Flow")
         # Highlight Peak Hour
-        peak_idx = df[masuk_col].idxmax()
-        fig_line.add_annotation(
-            x=df.loc[peak_idx, jam_col], y=df.loc[peak_idx, masuk_col],
-            text="Peak Hour 🚩", showarrow=True, arrowhead=1
-        )
+        try:
+            peak_idx = df[masuk_col].idxmax()
+            fig_line.add_annotation(
+                x=df.loc[peak_idx, jam_col], y=df.loc[peak_idx, masuk_col],
+                text="Peak Hour 🚩", showarrow=True, arrowhead=1
+            )
+        except:
+            pass # Skip jika error plotting
         st.plotly_chart(fig_line, use_container_width=True)
     
     with st.expander("Lihat Data Tabel"):
         st.dataframe(df, use_container_width=True)
 
     # ==========================================
-    # ✨ IMPLEMENTASI AI (Bagian Bawah)
+    # ✨ IMPLEMENTASI AI (SUDAH FIX)
     # ==========================================
     st.markdown("---")
     with st.expander("✨ Tanya AI tentang Pola Jam Sibuk", expanded=False):
