@@ -277,74 +277,80 @@ def kpi_content(df):
 # --- Fungsi Peringkas Data untuk AI (BARU) ---
 def generate_data_summary(df):
     """
-    Membuat ringkasan LENGKAP termasuk Family Index & Hubungannya dengan Dwell Time
-    agar AI bisa menganalisis chart.
+    Meringkas data dari 4 Chart utama agar AI bisa menganalisis visualisasi dashboard.
     """
     if df.empty: return "Data Kosong."
     
-    # 1. Ringkasan Dasar
+    # --- BAGIAN 1: DEMOGRAFI (Chart Kiri Atas) ---
     total_visit = df['Customer'].sum()
     total_male = df['Male_Total'].sum()
     total_female = df['Female_Total'].sum()
     
+    # Cari hari tersibuk
+    if 'DayOfWeek' in df.columns:
+        busy_day = df.groupby('DayOfWeek', observed=True)['Customer'].sum().idxmax()
+    else:
+        busy_day = "N/A"
+
+    # Kelompok usia dominan
     age_cols = ["Child(0~6 Age)", "Young person(7~15 Age)", "Teenager(16~35 Age)", "Middle age(36~60 Age)", "Senility(60< Age)"]
-    age_sums = df[age_cols].sum()
-    top_age_group = age_sums.idxmax()
+    top_age_group = df[age_cols].sum().idxmax()
     
-    # 2. Ringkasan Dwell Time
-    avg_dwell = 0
-    if 'Avg_dwell_time_min' in df.columns:
-        avg_dwell = df['Avg_dwell_time_min'].mean()
+    demog_summary = f"""
+    - Total Pengunjung: {total_visit}
+    - Gender: Pria {total_male} vs Wanita {total_female}
+    - Usia Dominan: {top_age_group}
+    - Hari Tersibuk: {busy_day}
+    """
 
-    # 3. Ringkasan Cuaca (Top 3)
-    weather_summary = "Tidak ada data cuaca"
+    # --- BAGIAN 2: FAMILY INDEX PER HARI (Chart Kiri Bawah) ---
+    family_trend = "Data Family Index N/A"
+    if 'Family_Index' in df.columns and 'DayOfWeek' in df.columns:
+        # Cari hari dengan Family Index tertinggi
+        day_family = df.groupby("DayOfWeek", observed=True)["Family_Index"].mean()
+        highest_family_day = day_family.idxmax()
+        highest_val = day_family.max()
+        family_trend = f"Rata-rata Family Index tertinggi jatuh pada hari {highest_family_day} (Skor: {highest_val:.2f})"
+
+    # --- BAGIAN 3: METRIK VS CUACA (Chart Kanan Atas) ---
+    weather_insight = "Data Cuaca N/A"
     if 'Weather' in df.columns:
-        weather_counts = df['Weather'].value_counts().head(3).to_dict()
-        weather_summary = str(weather_counts)
+        # Kita ambil rata-rata Total Customer per Cuaca sebagai default insight
+        weather_grp = df.groupby('Weather')['Customer'].mean().sort_values(ascending=False).head(3)
+        weather_dict = {k: round(v, 1) for k, v in weather_grp.items()}
+        weather_insight = f"Rata-rata Kunjungan Tertinggi saat Cuaca: {weather_dict}"
 
-    # 4. DATA BARU: Family Index Stats
-    family_stats = "Data Family Index tidak tersedia"
-    if 'Family_Index' in df.columns:
-        avg_family_index = df['Family_Index'].mean()
-        family_stats = f"Rata-rata Family Index: {avg_family_index:.2f} (Skala 0-1)"
-
-    # 5. DATA BARU: Hubungan Family Index vs Dwell Time (PENTING!)
-    # Ini mensimulasikan chart "Family Index vs Dwell Time" menjadi teks
-    relation_summary = "Data hubungan tidak cukup"
+    # --- BAGIAN 4: FAMILY INDEX VS DWELL TIME (Chart Kanan Bawah) ---
+    relation_summary = "Data Hubungan N/A"
     if "Family_Index" in df.columns and "Avg_dwell_time_min" in df.columns:
-        # Kita lakukan binning persis seperti di fungsi plot
         df_temp = df.copy()
         bins = [-0.1, 0.50, 0.75, 1.1] 
-        labels = ["Low (Sedikit Keluarga)", "Medium (Campuran)", "High (Banyak Keluarga)"]
+        labels = ["Low", "Medium", "High"]
         df_temp["Family_Category"] = pd.cut(df_temp["Family_Index"], bins=bins, labels=labels)
         
-        # Hitung rata-rata dwell time per kategori
         grouped = df_temp.groupby("Family_Category", observed=False)["Avg_dwell_time_min"].mean()
-        
-        # Ubah jadi string biar AI bisa baca
         relation_summary = (
-            f"Low Family Index Dwell Time: {grouped['Low (Sedikit Keluarga)']:.2f} menit; "
-            f"Medium Family Index Dwell Time: {grouped['Medium (Campuran)']:.2f} menit; "
-            f"High Family Index Dwell Time: {grouped['High (Banyak Keluarga)']:.2f} menit"
+            f"Low Family Index (Single/Sedikit) Dwell Time: {grouped.get('Low', 0):.1f} menit; "
+            f"High Family Index (Keluarga Besar) Dwell Time: {grouped.get('High', 0):.1f} menit"
         )
 
-    # --- Gabungkan Semua Jadi Satu Prompt ---
-    summary = f"""
-    DATA UMUM:
-    - Total Visitor: {total_visit}
-    - Gender Split: Male ({total_male}), Female ({total_female})
-    - Dominant Age Group: {top_age_group}
-    - Rata-rata Dwell Time Global: {avg_dwell:.2f} menit
-    - Kondisi Cuaca Dominan: {weather_summary}
+    # --- GABUNGKAN SEMUA ---
+    final_text = f"""
+    ANALISIS DASHBOARD (4 CHART):
     
-    DATA KHUSUS (FAMILY INDEX):
-    - {family_stats}
+    1. CHART DEMOGRAFI:
+    {demog_summary}
     
-    DATA HUBUNGAN (FAMILY INDEX vs DWELL TIME):
-    - {relation_summary}
+    2. CHART FAMILY INDEX (TREN HARIAN):
+    {family_trend}
+    
+    3. CHART CUACA (DAMPAK KE KUNJUNGAN):
+    {weather_insight}
+    
+    4. CHART HUBUNGAN (FAMILY INDEX VS LAMA KUNJUNGAN):
+    {relation_summary}
     """
-    return summary
-
+    return final_text
 # --- Fungsi Plotting ---
 
 def plot_age_gender(df):
@@ -549,4 +555,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
