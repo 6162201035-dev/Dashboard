@@ -277,10 +277,12 @@ def kpi_content(df):
 # --- Fungsi Peringkas Data untuk AI (BARU) ---
 def generate_data_summary(df):
     """
-    Membuat ringkasan string dari DataFrame untuk dikirim ke AI.
+    Membuat ringkasan LENGKAP termasuk Family Index & Hubungannya dengan Dwell Time
+    agar AI bisa menganalisis chart.
     """
     if df.empty: return "Data Kosong."
     
+    # 1. Ringkasan Dasar
     total_visit = df['Customer'].sum()
     total_male = df['Male_Total'].sum()
     total_female = df['Female_Total'].sum()
@@ -289,24 +291,57 @@ def generate_data_summary(df):
     age_sums = df[age_cols].sum()
     top_age_group = age_sums.idxmax()
     
-    # Rata-rata dwell time
+    # 2. Ringkasan Dwell Time
     avg_dwell = 0
     if 'Avg_dwell_time_min' in df.columns:
         avg_dwell = df['Avg_dwell_time_min'].mean()
 
-    # Weather insights
+    # 3. Ringkasan Cuaca (Top 3)
     weather_summary = "Tidak ada data cuaca"
     if 'Weather' in df.columns:
-        # Top 3 kondisi cuaca paling sering
         weather_counts = df['Weather'].value_counts().head(3).to_dict()
         weather_summary = str(weather_counts)
 
+    # 4. DATA BARU: Family Index Stats
+    family_stats = "Data Family Index tidak tersedia"
+    if 'Family_Index' in df.columns:
+        avg_family_index = df['Family_Index'].mean()
+        family_stats = f"Rata-rata Family Index: {avg_family_index:.2f} (Skala 0-1)"
+
+    # 5. DATA BARU: Hubungan Family Index vs Dwell Time (PENTING!)
+    # Ini mensimulasikan chart "Family Index vs Dwell Time" menjadi teks
+    relation_summary = "Data hubungan tidak cukup"
+    if "Family_Index" in df.columns and "Avg_dwell_time_min" in df.columns:
+        # Kita lakukan binning persis seperti di fungsi plot
+        df_temp = df.copy()
+        bins = [-0.1, 0.50, 0.75, 1.1] 
+        labels = ["Low (Sedikit Keluarga)", "Medium (Campuran)", "High (Banyak Keluarga)"]
+        df_temp["Family_Category"] = pd.cut(df_temp["Family_Index"], bins=bins, labels=labels)
+        
+        # Hitung rata-rata dwell time per kategori
+        grouped = df_temp.groupby("Family_Category", observed=False)["Avg_dwell_time_min"].mean()
+        
+        # Ubah jadi string biar AI bisa baca
+        relation_summary = (
+            f"Low Family Index Dwell Time: {grouped['Low (Sedikit Keluarga)']:.2f} menit; "
+            f"Medium Family Index Dwell Time: {grouped['Medium (Campuran)']:.2f} menit; "
+            f"High Family Index Dwell Time: {grouped['High (Banyak Keluarga)']:.2f} menit"
+        )
+
+    # --- Gabungkan Semua Jadi Satu Prompt ---
     summary = f"""
+    DATA UMUM:
     - Total Visitor: {total_visit}
     - Gender Split: Male ({total_male}), Female ({total_female})
     - Dominant Age Group: {top_age_group}
-    - Avg Dwell Time: {avg_dwell:.2f} minutes
-    - Top Weather Conditions: {weather_summary}
+    - Rata-rata Dwell Time Global: {avg_dwell:.2f} menit
+    - Kondisi Cuaca Dominan: {weather_summary}
+    
+    DATA KHUSUS (FAMILY INDEX):
+    - {family_stats}
+    
+    DATA HUBUNGAN (FAMILY INDEX vs DWELL TIME):
+    - {relation_summary}
     """
     return summary
 
@@ -514,3 +549,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
