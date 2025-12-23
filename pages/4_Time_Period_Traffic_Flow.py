@@ -8,7 +8,7 @@ import os
 import requests    
 from datetime import date
 
-# --- 1. IMPORT MODULE AI (Baris ini yang baru) ---
+# --- 1. IMPORT MODULE AI ---
 import sys
 sys.path.append('.') 
 import ai_utils 
@@ -28,30 +28,39 @@ DEFAULT_USER_ID = "4748ef52-ccb6-4dbe-acf4-1268d25123d8"
 DEFAULT_SITE_CODE = "P00077"
 
 # ==============================
-# 📥 FUNGSI PENGAMBIL DATA (STANDAR)
+# 📥 FUNGSI PENGAMBIL DATA
 # ==============================
 def fetch_traffic_flow_data(token, user_id, start_date_slash, end_date_slash, site_code):
     st.write("Mengambil Data Time Traffic Flow...")
-    # Endpoint API standar untuk Time Period
+    
+    # URL API (Menggunakan endpoint Passenger Flow)
     data_api_url = 'https://winnertech.hk:8090/api/en-us/passengerFlow/PassengerFlowTimePeriodExportData'
     
+    # Payload disesuaikan dengan struktur Page 2 (Associated Area) yang sukses
     data_payload = {
         "userId": user_id, "lang": "en-us", "menuId": 3000103,
         "params": {
             "isClose": 0, "module": "BM00019S007", "dateType": "d",
             "beginDate": start_date_slash, "endDate": end_date_slash,
-            "siteKey": site_code,
-            "timePeriod": 60 # Default interval 60 menit (per jam)
+            # Menggunakan SiteTreeSelects (mirip Page 2) agar lebih stabil
+            "SiteTreeSelects": [
+                {"source": "0", "type": "0", "code": site_code, "operators": []}
+            ],
+            "timePeriod": 60 # Interval per 60 menit (1 Jam)
         }
     }
+    
     data_headers = {
         'Accept': 'application/json, text/plain, */*', 'Authorization': token,
         'Content-Type': 'application/json', 'Origin': 'https.winnertech.hk:8090',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0',
     }
+    
     try:
         response = requests.post(data_api_url, headers=data_headers, json=data_payload, timeout=30)
         response.raise_for_status()
+        
+        # Cek apakah responsenya file Excel
         if response.content and response.headers.get('Content-Type') != 'application/json':
             with open(TRAFFIC_FILE, 'wb') as f:
                 f.write(response.content)
@@ -65,7 +74,7 @@ def fetch_traffic_flow_data(token, user_id, start_date_slash, end_date_slash, si
         return False
 
 # ==============================
-# 📂 LOAD DATA (STANDAR)
+# 📂 LOAD DATA
 # ==============================
 @st.cache_data
 def load_data():
@@ -79,12 +88,11 @@ def load_data():
     # Bersihkan nama kolom
     df.columns = [c.strip() for c in df.columns]
     
-    # Mapping nama kolom agar seragam
-    # Menangani variasi nama kolom dari API (Entering/Enter/Masuk)
+    # Mapping nama kolom fleksibel (Antisipasi beda nama dari API)
     rename_map = {
-        "Time": "Jam", "Time Period": "Jam",
-        "Enter": "Masuk", "Entering": "Masuk",
-        "Exit": "Keluar", "Exiting": "Keluar",
+        "Time": "Jam", "Time Period": "Jam", "Periode Waktu": "Jam",
+        "Enter": "Masuk", "Entering": "Masuk", "In": "Masuk",
+        "Exit": "Keluar", "Exiting": "Keluar", "Out": "Keluar",
         "Staff": "Staff"
     }
     existing_cols_to_rename = {k: v for k, v in rename_map.items() if k in df.columns}
@@ -98,20 +106,19 @@ def load_data():
     return df
 
 # ==========================================
-# 🧠 FUNGSI AI: PERINGKAS DATA (INI KODE BARU)
+# 🧠 FUNGSI AI: PERINGKAS DATA
 # ==========================================
 def generate_traffic_summary(df):
     """
-    Fungsi ini khusus untuk membaca DataFrame dan membuat teks ringkasan untuk AI.
-    Tidak mengubah data asli.
+    Membuat ringkasan data trafik untuk dibaca AI.
     """
     if df.empty: return "Data Trafik Kosong."
     
-    # Deteksi kolom 'Masuk' dan 'Jam' secara dinamis
+    # Deteksi kolom 'Masuk' dan 'Jam'
     col_masuk = next((c for c in df.columns if c in ['Masuk', 'Enter', 'Entering']), None)
     col_jam = next((c for c in df.columns if c in ['Jam', 'Time', 'Time Period']), df.columns[0])
     
-    if not col_masuk: return "Kolom data masuk tidak ditemukan."
+    if not col_masuk: return "Kolom data 'Masuk' tidak ditemukan."
 
     total_masuk = df[col_masuk].sum()
     avg_traffic = df[col_masuk].mean()
@@ -131,12 +138,11 @@ def generate_traffic_summary(df):
         low_time = "N/A"
         low_val = 0
 
-    # Teks prompt untuk AI
     summary = f"""
     DATA TRAFIK BERDASARKAN WAKTU (HOURLY TRAFFIC):
     
     STATISTIK UTAMA:
-    - Total Pengunjung Hari Ini: {total_masuk}
+    - Total Pengunjung: {total_masuk}
     - Rata-rata Pengunjung per Jam: {avg_traffic:.1f}
     
     JAM SIBUK (PEAK HOUR):
@@ -161,15 +167,14 @@ def generate_traffic_summary(df):
 # ==============================
 def main():
     
-    # --- 1. SIDEBAR INPUT (Standar seperti Page 2) ---
+    # --- SIDEBAR (Sama seperti Page 2) ---
     with st.sidebar:
         st.header("⚙️ Kontrol Pengambilan Data")
         if 'token' not in st.session_state: st.session_state.token = "Bearer ey..."
         if 'start_date' not in st.session_state: st.session_state.start_date = date.today()
-        if 'end_date' not in st.session_state: st.session_state.end_date = date.today() # Ditambahkan biar aman
+        if 'end_date' not in st.session_state: st.session_state.end_date = date.today()
         
         st.session_state.token = st.text_input("Authorization Token", value=st.session_state.token, type="password")
-        # Time Period Flow biasanya per hari, tapi kita kasih range biar fleksibel
         st.session_state.start_date = st.date_input("Start Date", value=st.session_state.start_date)
         st.session_state.end_date = st.date_input("End Date", value=st.session_state.end_date)
         st.markdown("---")
@@ -201,9 +206,9 @@ def main():
         st.warning("Data kosong. Cek rentang tanggal.")
         st.stop()
 
-    # --- 2. TAMPILAN GRAFIK (STANDAR) ---
+    # --- TAMPILAN GRAFIK ---
     
-    # Metrik Atas
+    # Metrik
     col1, col2, col3 = st.columns(3)
     masuk_col = next((c for c in df.columns if c in ['Masuk', 'Entering']), None)
     
@@ -212,19 +217,25 @@ def main():
         col2.metric("Peak Hour", f"{df[masuk_col].max():,} org")
         col3.metric("Rata-rata/Jam", f"{df[masuk_col].mean():.0f} org")
         
-        # Grafik Garis
-        st.subheader("📈 Tren Pengunjung")
+        # Grafik Line Chart
+        st.subheader("📈 Tren Pengunjung per Jam")
         jam_col = next((c for c in df.columns if c in ['Jam', 'Time']), df.columns[0])
-        df[jam_col] = df[jam_col].astype(str) # Agar urutan jam tidak berantakan
+        df[jam_col] = df[jam_col].astype(str) 
         
-        fig_line = px.line(df, x=jam_col, y=masuk_col, markers=True, title="Traffic Flow per Jam")
+        fig_line = px.line(df, x=jam_col, y=masuk_col, markers=True, title="Traffic Flow")
+        # Highlight Peak Hour
+        peak_idx = df[masuk_col].idxmax()
+        fig_line.add_annotation(
+            x=df.loc[peak_idx, jam_col], y=df.loc[peak_idx, masuk_col],
+            text="Peak Hour 🚩", showarrow=True, arrowhead=1
+        )
         st.plotly_chart(fig_line, use_container_width=True)
     
     with st.expander("Lihat Data Tabel"):
         st.dataframe(df, use_container_width=True)
 
     # ==========================================
-    # ✨ 3. IMPLEMENTASI AI (DITAMBAHKAN DI BAWAH)
+    # ✨ IMPLEMENTASI AI (Bagian Bawah)
     # ==========================================
     st.markdown("---")
     with st.expander("✨ Tanya AI tentang Pola Jam Sibuk", expanded=False):
@@ -246,17 +257,12 @@ def main():
             st.write("") 
             st.write("")
             if st.button("Analisa Waktu 🤖", type="primary", use_container_width=True):
-                if 'df' in locals() and not df.empty:
+                if not df.empty:
                     with st.spinner("AI sedang menganalisis pola waktu..."):
-                        # Panggil fungsi ringkas data
                         summary_text = generate_traffic_summary(df)
-                        # Kirim ke Gemini
                         jawaban = ai_utils.analyze_with_gemini(summary_text, user_q)
-                        
                         st.markdown("### 💡 Insight Operasional:")
                         st.markdown(jawaban)
-                else:
-                    st.error("Dataframe tidak ditemukan.")
 
 if __name__ == "__main__":
     main()
