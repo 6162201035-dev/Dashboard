@@ -1,5 +1,5 @@
 # ==========================================
-# 🏬 AREA PERFORMANCE ANALYSIS (AI INTEGRATED - RAG)
+# 🏬 AREA PERFORMANCE ANALYSIS (AI INTEGRATED - FINAL FIX)
 # ==========================================
 import streamlit as st
 import pandas as pd
@@ -98,32 +98,27 @@ def load_data():
     return df
 
 # ==========================================
-# 🧠 FUNGSI PERINGKAS DATA UNTUK AI (ADVANCED)
+# 🧠 FUNGSI PERINGKAS DATA UNTUK AI
 # ==========================================
-def generate_performance_summary(df, df_clusters_summary=None):
+def generate_performance_summary(df, df_clusters_summary=None, num_clusters=3):
     """
     Meringkas performa area, tingkat konversi, dan karakteristik cluster.
     """
     if df.empty: return "Data Performance Kosong."
 
-    # 1. Top Performers (Konversi Buying Rate Tertinggi)
     top_buying = df.sort_values("Buying Rate", ascending=False).head(3)
-    # 2. Top Interest (Banyak yang minat tapi belum tentu beli)
     top_interest = df.sort_values("Interest Rate", ascending=False).head(3)
     
-    # 3. Rata-rata Global
     avg_buying = df["Buying Rate"].mean()
     avg_interest = df["Interest Rate"].mean()
     avg_dwell_rate = df["Dwell Rate"].mean()
 
-    # 4. Analisis Cluster (Jika ada)
     cluster_text = ""
     if df_clusters_summary is not None and not df_clusters_summary.empty:
-        cluster_text = "\nKARAKTERISTIK CLUSTER (Berdasarkan Pola Data):\n"
+        cluster_text = f"\nKARAKTERISTIK {num_clusters} CLUSTER YANG TERBENTUK:\n"
         for idx, row in df_clusters_summary.iterrows():
-            cluster_text += f"- {idx}: Dwell={row['Dwell']:.1f}, Interest={row['Interest']:.1f}, Buy={row['Tend To Buy']:.1f}\n"
+            cluster_text += f"- {idx}: Rata-rata Dwell={row['Dwell']:.1f}, Interest={row['Interest']:.1f}, Buy={row['Tend To Buy']:.1f}\n"
 
-    # Susun Teks Prompt
     summary_text = f"""
     ANALISIS PERFORMA AREA TOKO (PERFORMANCE & CLUSTERING):
     
@@ -133,25 +128,17 @@ def generate_performance_summary(df, df_clusters_summary=None):
     - Rata-rata Dwell Rate: {avg_dwell_rate:.1%}
     
     2. AREA DENGAN KONVERSI PENJUALAN TERTINGGI (CHAMPIONS):
-    (Area ini sangat efektif mengubah pengunjung menjadi pembeli)
     """
     for _, row in top_buying.iterrows():
         summary_text += f"- {row['Store Area']}: Buying Rate {row['Buying Rate']:.1%} (Total Visits: {row['Area Attendance']})\n"
 
     summary_text += """
     3. AREA DENGAN MINAT TERTINGGI (POTENTIAL):
-    (Area ini menarik perhatian banyak orang)
     """
     for _, row in top_interest.iterrows():
         summary_text += f"- {row['Store Area']}: Interest Rate {row['Interest Rate']:.1%}\n"
 
     summary_text += cluster_text
-    
-    summary_text += """
-    \nTUGAS AI:
-    Berikan analisis mendalam tentang efektivitas layout toko. 
-    Jika ada Cluster dengan Interest tinggi tapi Buying rendah, sarankan perbaikan.
-    """
     
     return summary_text
 
@@ -160,29 +147,22 @@ def generate_performance_summary(df, df_clusters_summary=None):
 # ===================================
 def build_dashboard(df):
     
-    # ==============================
-    # 🧮 DATA CLEANING
-    # ==============================
+    # --- DATA CLEANING ---
     num_cols = ["Area Attendance", "Avg. Attention Time (S)", "Dwell", "Interest", "Tend To Buy"]
     for col in num_cols:
         df[col] = pd.to_numeric(df[col], errors="coerce")
-
     df.dropna(subset=num_cols, inplace=True)
     
     if df.empty:
         st.error("Data kosong setelah dibersihkan.")
         st.stop()
 
-    # ==============================
-    # 🧠 FEATURE ENGINEERING
-    # ==============================
+    # --- FEATURE ENGINEERING ---
     df["Dwell Rate"] = df["Dwell"] / df["Area Attendance"]
     df["Interest Rate"] = df["Interest"] / df["Area Attendance"]
     df["Buying Rate"] = df["Tend To Buy"] / df["Area Attendance"] 
     
-    # ==============================
-    # 📊 BAGIAN 1 — BEHAVIOR BREAKDOWN
-    # ==============================
+    # --- BAGIAN 1: BEHAVIOR ---
     st.subheader("📊 Komposisi Perilaku Pengunjung per Area")
     with st.container(border=True): 
         df_melted = df.melt(
@@ -195,27 +175,28 @@ def build_dashboard(df):
         fig_stacked_bar = px.bar(
             df_melted, x="Store Area", y="Proporsi", color="Tipe Perilaku",
             title="Komposisi Perilaku Pengunjung di Setiap Area",
-            color_discrete_map={
-                'Dwell Rate': '#CCCCCC', 
-                'Interest Rate': '#FFB703',
-                'Buying Rate': '#02C39A' 
-            },
+            color_discrete_map={'Dwell Rate': '#CCCCCC', 'Interest Rate': '#FFB703', 'Buying Rate': '#02C39A'},
             category_orders={"Store Area": sorted_areas}
         )
-        fig_stacked_bar.update_layout(
-            barmode='stack', yaxis_title="Proporsi Perilaku",
-            yaxis_tickformat='.0%'
-        )
+        fig_stacked_bar.update_layout(barmode='stack', yaxis_title="Proporsi Perilaku", yaxis_tickformat='.0%')
         st.plotly_chart(fig_stacked_bar, use_container_width=True)
 
     st.markdown("---") 
 
     # ==============================
-    # 🧩 BAGIAN 2 — CLUSTERING & AI
+    # 🧩 BAGIAN 2: CLUSTERING & AI
     # ==============================
     st.subheader("🧩 Cluster Area & Analisis AI")
     
-    # --- PROSES CLUSTERING (Di luar container agar datanya bisa diambil AI) ---
+    # --- 1. KONTROL SLIDER (SAYA KEMBALIKAN DI SINI) ---
+    with st.expander("🎛️ Pengaturan Cluster & Visualisasi", expanded=True):
+        col_ctrl1, col_ctrl2 = st.columns(2)
+        with col_ctrl1:
+            reduction_method = st.radio("Metode Reduksi Dimensi:", ["PCA", "t-SNE"], index=1, horizontal=True)
+        with col_ctrl2:
+            optimal_k = st.slider("Jumlah Cluster (k):", min_value=2, max_value=8, value=3)
+
+    # --- 2. PROSES CLUSTERING (DINAMIS MENGIKUTI SLIDER) ---
     cluster_features = ["Dwell", "Interest", "Tend To Buy"]
     df_cluster_raw = df[["Store Area"] + cluster_features].dropna().reset_index(drop=True)
     
@@ -223,27 +204,29 @@ def build_dashboard(df):
     X_scaled = scaler.fit_transform(df_cluster_raw[cluster_features])
     df_cluster = df_cluster_raw.copy()
 
-    # Default settings untuk visualisasi
-    reduction_method = "t-SNE" 
-    optimal_k = 3
-
-    # Logika Reduksi & K-Means (Otomatis jalan default k=3)
-    perplexity_value = min(10, len(X_scaled) - 1)
-    tsne = TSNE(n_components=2, perplexity=perplexity_value, random_state=42, learning_rate='auto')
-    X_reduced = tsne.fit_transform(X_scaled)
+    # Reduksi Dimensi
+    if reduction_method == "PCA":
+        pca = PCA(n_components=2, random_state=42)
+        X_reduced = pca.fit_transform(X_scaled)
+    else:
+        perplexity_value = min(10, len(X_scaled) - 1)
+        tsne = TSNE(n_components=2, perplexity=perplexity_value, random_state=42, learning_rate='auto')
+        X_reduced = tsne.fit_transform(X_scaled)
+    
     df_cluster["Dim1"], df_cluster["Dim2"] = X_reduced[:, 0], X_reduced[:, 1]
     
+    # K-Means dengan optimal_k dari Slider
     kmeans = KMeans(n_clusters=optimal_k, random_state=42, n_init=10)
     df_cluster["Cluster"] = kmeans.fit_predict(X_scaled)
     df_cluster.sort_values("Cluster", inplace=True)
     label_map = {i: f"Cluster {i+1}" for i in range(optimal_k)}
     df_cluster["Cluster Label"] = df_cluster["Cluster"].map(label_map)
 
-    # Siapkan Data Summary Cluster untuk AI
+    # Summary untuk AI
     df_cluster_avg = df_cluster.groupby("Cluster Label")[cluster_features].mean().round(2)
     
-    # --- UI UNTUK AI ANALYST ---
-    with st.expander("✨ Tanya AI tentang Performa & Cluster Area Ini", expanded=False):
+    # --- 3. UI AI ANALYST ---
+    with st.expander(f"✨ Tanya AI tentang {optimal_k} Cluster Ini", expanded=False):
         c_ai1, c_ai2 = st.columns([3, 1])
         with c_ai1:
             q_options = [
@@ -265,20 +248,19 @@ def build_dashboard(df):
             
         if tombol_tanya:
             with st.spinner("AI sedang membedah performa area & cluster..."):
-                # 1. Ringkas data (Kirim DF utama & DF Cluster Summary)
-                summary_text = generate_performance_summary(df, df_cluster_avg)
-                # 2. Kirim ke AI
+                # Kirim data dengan jumlah cluster yang benar
+                summary_text = generate_performance_summary(df, df_cluster_avg, optimal_k)
                 jawaban_ai = ai_utils.analyze_with_gemini(summary_text, user_q)
-                # 3. Tampilkan
                 st.markdown("### 💡 Insight Performa:")
                 st.markdown(jawaban_ai)
     
     st.markdown("---")
 
-    # --- VISUALISASI CLUSTER ---
+    # --- 4. VISUALISASI ---
     with st.container(border=True): 
         palette = px.colors.qualitative.Bold
         unique_labels = sorted(df_cluster["Cluster Label"].unique())
+        # Pastikan warna cukup untuk jumlah k
         color_map_fixed = {label: palette[i % len(palette)] for i, label in enumerate(unique_labels)}
 
         df_viz = pd.merge(df_cluster, df[["Store Area", "Area Attendance"]], on="Store Area", how="left")
@@ -315,7 +297,7 @@ def build_dashboard(df):
             st.plotly_chart(fig_radar, use_container_width=True)
 
         # Treemap
-        st.markdown("##### 🏢 Detail Anggota Klaster")
+        st.markdown(f"##### 🏢 Detail Anggota {optimal_k} Klaster")
         fig_treemap = px.treemap(
             df_viz, path=[px.Constant("Semua Area"), 'Cluster Label', 'Store Area'], 
             values='Area Attendance', color='Cluster Label', color_discrete_map=color_map_fixed
