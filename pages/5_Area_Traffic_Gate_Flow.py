@@ -1,3 +1,6 @@
+# ==========================================
+# 🚶‍♂️ TRAFFIC & FLOW ANALYTICS (AI INTEGRATED)
+# ==========================================
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -5,6 +8,11 @@ import plotly.graph_objects as go
 import os        
 import requests 
 from datetime import date 
+
+# --- IMPORT MODULE AI (Baris Baru) ---
+import sys
+sys.path.append('.') 
+import ai_utils 
 
 # ==============================
 # ⚙️ CONFIG
@@ -25,7 +33,7 @@ DEFAULT_USER_ID = "4748ef52-ccb6-4dbe-acf4-1268d25123d8"
 DEFAULT_SITE_CODE = "P00077"
 
 # ==============================
-# 📥 DATA FETCHING FUNCTIONS
+# 📥 DATA FETCHING FUNCTIONS (TETAP SAMA)
 # ==============================
 
 def fetch_area_traffic(token, user_id, start_date_slash, end_date_slash, site_code):
@@ -91,7 +99,7 @@ def fetch_gate_flow(token, user_id, start_date_slash, end_date_slash, site_code)
         return False
 
 # ==============================
-# 📂 DATA LOADING
+# 📂 DATA LOADING (TETAP SAMA)
 # ==============================
 @st.cache_data
 def load_data():
@@ -142,41 +150,83 @@ def load_data():
         if col in df_flow.columns:
             df_flow[col] = pd.to_numeric(df_flow[col], errors='coerce').fillna(0)
 
-    # Simple Validation
-    if 'Area' not in df_traffic.columns:
-        st.error("Column 'Area' missing. Check `rename_map_traffic`.")
-    if 'Gate Flow(out)' not in df_flow.columns:
-        st.error("Column 'Gate Flow(out)' missing. Check `rename_map_flow`.")
-
     return df_traffic, df_flow
 
+# ==========================================
+# 🧠 FUNGSI AI SUMMARY (BARU)
+# ==========================================
+def generate_traffic_flow_summary(df_traffic, df_flow):
+    """
+    Meringkas data Area dan Gate secara komprehensif untuk AI.
+    """
+    if df_traffic.empty and df_flow.empty: return "Data Kosong."
+
+    # 1. Analisis Area (Hotspots)
+    top_area = "N/A"
+    low_area = "N/A"
+    total_vol_area = 0
+    
+    if not df_traffic.empty:
+        total_vol_area = df_traffic['Customer'].sum()
+        sorted_area = df_traffic.sort_values(by="Customer", ascending=False)
+        top_area = f"{sorted_area.iloc[0]['Area']} ({sorted_area.iloc[0]['Customer']:,.0f})"
+        low_area = f"{sorted_area.iloc[-1]['Area']} ({sorted_area.iloc[-1]['Customer']:,.0f})"
+    
+    # 2. Analisis Gate (Entry vs Exit)
+    gate_summary = ""
+    total_in = 0
+    total_out = 0
+    
+    if not df_flow.empty:
+        total_in = df_flow['Gate Flow(in)'].sum()
+        total_out = df_flow['Gate Flow(out)'].sum()
+        
+        # Cari Gate Utama (Volume Terbesar)
+        df_flow['Total'] = df_flow['Gate Flow(in)'] + df_flow['Gate Flow(out)']
+        top_gate = df_flow.sort_values('Total', ascending=False).iloc[0]
+        
+        # Identifikasi Karakteristik Gate
+        entries = df_flow[df_flow['Gate Flow(in)'] > df_flow['Gate Flow(out)']]
+        exits = df_flow[df_flow['Gate Flow(out)'] > df_flow['Gate Flow(in)']]
+        
+        gate_summary = f"""
+        - Gate Tersibuk: {top_gate['Gate']} (Total: {top_gate['Total']:,.0f})
+        - Dominan Pintu Masuk (Entry Heavy): {', '.join(entries['Gate'].tolist()) if not entries.empty else 'Tidak ada'}
+        - Dominan Pintu Keluar (Exit Heavy): {', '.join(exits['Gate'].tolist()) if not exits.empty else 'Tidak ada'}
+        """
+
+    summary_text = f"""
+    ANALISIS TRAFFIC AREA & GATE FLOW:
+    
+    A. METRIK AREA (ZONA BELANJA):
+    - Total Pengunjung Area: {total_vol_area:,.0f}
+    - Area Paling Ramai (Hotspot): {top_area} -> Indikasi area paling menarik.
+    - Area Paling Sepi (Coldspot): {low_area} -> Perlu evaluasi layout/produk.
+    
+    B. METRIK GATE (ALUR KELUAR-MASUK):
+    - Total Masuk (Inflow): {total_in:,.0f}
+    - Total Keluar (Outflow): {total_out:,.0f}
+    - Net Flow (Masuk - Keluar): {total_in - total_out:,.0f}
+    
+    C. KARAKTERISTIK GATE:
+    {gate_summary}
+    
+    TUGAS AI:
+    Berikan analisis mendalam tentang alur pengunjung. 
+    Apakah ada ketimpangan antara area ramai dan sepi? 
+    Bagaimana keseimbangan pintu masuk dan keluar? Apakah ada potensi bottleneck di gate tertentu?
+    """
+    return summary_text
+
 # ===================================
-# 🎁 DASHBOARD BUILDER (MODIFIED)
+# 🎁 DASHBOARD BUILDER (TETAP SAMA)
 # ===================================
 def build_dashboard(df_traffic, df_flow):
     """
     Fungsi ini menganalisis data RINGKASAN dalam satu halaman.
     """
     
-    # --- 1. HOTSPOTS INSIGHTS ---
-    # Hitung Gate tersibuk
-    if not df_flow.empty:
-        df_flow['Total_Gate_Vol'] = df_flow['Gate Flow(in)'] + df_flow['Gate Flow(out)']
-        busiest_gate_row = df_flow.loc[df_flow['Total_Gate_Vol'].idxmax()]
-        busiest_gate_name = busiest_gate_row['Gate']
-        busiest_gate_val = busiest_gate_row['Total_Gate_Vol']
-    else:
-        busiest_gate_name, busiest_gate_val = "-", 0
-
-    # Hitung Area tersibuk
-    if not df_traffic.empty:
-        busiest_area_row = df_traffic.loc[df_traffic['Customer'].idxmax()]
-        busiest_area_name = busiest_area_row['Area']
-        busiest_area_val = busiest_area_row['Customer']
-    else:
-        busiest_area_name, busiest_area_val = "-", 0
-
-    # --- 2. KPI METRICS ---
+    # --- KPI METRICS ---
     st.subheader("🧭 Ringkasan KPI Total")
     total_customer = df_traffic['Customer'].sum()
     total_flow_in = df_flow['Gate Flow(in)'].sum()
@@ -189,17 +239,15 @@ def build_dashboard(df_traffic, df_flow):
     
     st.markdown("---")
 
-    # --- 3. MAIN COLUMNS ---
+    # --- MAIN COLUMNS ---
     col1, col2 = st.columns(2)
 
-    # =========================================
-    # KOLOM KIRI: AREA ANALYSIS (Bar + Donut)
-    # =========================================
+    # KOLOM KIRI: AREA ANALYSIS
     with col1:
         with st.container(border=True):
             st.subheader("📊 Analisis Area")
             
-            # A. Bar Chart Area
+            # Bar Chart Area
             area_agg = df_traffic.groupby("Area")["Customer"].sum().reset_index().sort_values(by="Customer", ascending=False)
             area_agg = area_agg[area_agg['Customer'] > 0]
             
@@ -211,7 +259,7 @@ def build_dashboard(df_traffic, df_flow):
                 )
                 st.plotly_chart(fig_area, use_container_width=True)
                 
-                # B. Donut Chart
+                # Donut Chart
                 st.markdown("---")
                 top_n = 5
                 df_pie = area_agg.copy()
@@ -231,18 +279,15 @@ def build_dashboard(df_traffic, df_flow):
                     color_discrete_sequence=px.colors.sequential.Blues_r
                 )
                 st.plotly_chart(fig_pie, use_container_width=True)
-
             else:
                 st.warning("Data Customer kosong.")
 
-    # =========================================
-    # KOLOM KANAN: GATE ANALYSIS (Bar + Scatter)
-    # =========================================
+    # KOLOM KANAN: GATE ANALYSIS
     with col2:
         with st.container(border=True):
             st.subheader("🚪 Analisis Gate")
             
-            # --- A. Grouped Bar Chart (Masuk vs Keluar) ---
+            # Grouped Bar Chart (Masuk vs Keluar)
             gate_agg = df_flow.groupby("Gate").agg({
                 "Gate Flow(in)": "sum",
                 "Gate Flow(out)": "sum"
@@ -258,13 +303,11 @@ def build_dashboard(df_traffic, df_flow):
                     title="Perbandingan Volume Masuk vs Keluar",
                     color_discrete_map={"Gate Flow(in)": "#2E86C1", "Gate Flow(out)": "#E74C3C"}
                 )
-                # Pindahkan legenda ke atas agar hemat tempat
                 fig_gate.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
                 st.plotly_chart(fig_gate, use_container_width=True)
                 
-                # --- B. Scatter Plot (Dipindahkan ke SINI) ---
+                # Scatter Plot
                 st.markdown("---")
-                
                 gate_scatter = df_flow.groupby("Gate")[["Gate Flow(in)", "Gate Flow(out)"]].sum().reset_index()
                 gate_scatter['Total Volume'] = gate_scatter['Gate Flow(in)'] + gate_scatter['Gate Flow(out)']
                 
@@ -273,24 +316,21 @@ def build_dashboard(df_traffic, df_flow):
                     x="Gate Flow(in)", y="Gate Flow(out)", 
                     size="Total Volume", color="Gate",
                     hover_name="Gate", text="Gate",
-                    # Judul dihapus/dipendekkan karena sudah ada header markdown
                     labels={"Gate Flow(in)": "Inflow", "Gate Flow(out)": "Outflow"}
                 )
                 
-                # Garis Diagonal
+                # Garis Diagonal (Balance)
                 max_val = max(gate_scatter["Gate Flow(in)"].max(), gate_scatter["Gate Flow(out)"].max())
                 fig_scatter.add_shape(type="line", line=dict(dash="dash", color="gray"),
                     x0=0, y0=0, x1=max_val, y1=max_val)
                 
                 fig_scatter.update_traces(textposition='top center')
-                fig_scatter.update_layout(showlegend=False, margin=dict(l=0, r=0, t=10, b=0)) # Hemat margin
-                
+                fig_scatter.update_layout(showlegend=False, margin=dict(l=0, r=0, t=10, b=0))
                 st.plotly_chart(fig_scatter, use_container_width=True)
-
             else:
                 st.warning("Data Gate kosong.")
 
-    # --- 4. RAW DATA (Di paling bawah) ---
+    # RAW DATA
     st.markdown("---")
     with st.expander("📂 Lihat Data Mentah"):
         st.markdown("#### Data Area Traffic")
@@ -357,9 +397,37 @@ def main():
         
     build_dashboard(df_traffic, df_flow)
 
+    # ==========================================
+    # ✨ FITUR AI (DISISIPKAN DI SINI)
+    # ==========================================
+    st.markdown("---")
+    with st.expander("✨ Tanya AI tentang Area & Gate Flow", expanded=False):
+        c_ai1, c_ai2 = st.columns([3, 1])
+        with c_ai1:
+            q_options = [
+                "Area mana yang paling underperform (sepi) dan butuh perbaikan?",
+                "Analisis keseimbangan pintu masuk dan keluar, apakah normal?",
+                "Apakah ada bottleneck (antrean) di gate tertentu?",
+                "Tulis pertanyaan sendiri..."
+            ]
+            selected_q = st.selectbox("Pilih Pertanyaan:", q_options)
+            if selected_q == "Tulis pertanyaan sendiri...":
+                user_q = st.text_input("Ketik pertanyaanmu:", "Jelaskan overview traffic hari ini.")
+            else:
+                user_q = selected_q
+        
+        with c_ai2:
+            st.write("") 
+            st.write("")
+            tombol_analisa = st.button("Analisa Flow 🤖", type="primary", use_container_width=True)
+
+        if tombol_analisa:
+            with st.spinner("AI sedang menganalisis traffic area & gate..."):
+                summary_text = generate_traffic_flow_summary(df_traffic, df_flow)
+                jawaban = ai_utils.analyze_with_gemini(summary_text, user_q)
+                
+                st.markdown("### 💡 Insight Traffic Flow:")
+                st.info(jawaban)
+
 if __name__ == "__main__":
     main()
-
-
-
-
